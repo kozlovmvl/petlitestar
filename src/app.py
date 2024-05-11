@@ -1,7 +1,5 @@
-from litestar import Litestar, get
+from litestar import Litestar
 
-@get("/login")
-async def login() -> dict[str, str]:
-    return {"token": "token"}
+from .users.controllers import UserController
 
-app = Litestar([login])
+app = Litestar(route_handlers=[UserController])
