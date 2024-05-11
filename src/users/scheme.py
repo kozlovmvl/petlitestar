@@ -7,6 +7,8 @@ class UserReadSchema(BaseModel):
     email: str
     username: str
 
+    model_config = {"from_attributes": True}
+
 
 class UserCreateSchema(BaseModel):
     email: str

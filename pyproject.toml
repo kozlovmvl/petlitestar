@@ -11,6 +11,9 @@ litestar = "^2.8.2"
 uvicorn = "^0.29.0"
 gunicorn = "^22.0.0"
 pydantic = "^2.7.1"
+python-dotenv = "^1.0.1"
+advanced-alchemy = "^0.9.3"
+asyncpg = "^0.29.0"
 
 
 [build-system]
