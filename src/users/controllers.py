@@ -3,12 +3,12 @@ from litestar import Controller, get, post, delete
 from litestar.di import Provide
 from pydantic import TypeAdapter
 
-from .models import UserRepository, provide_user_repository
-
-from .scheme import UserReadSchema, UserCreateSchema, UserUpdateSchema
+from users.models import UserRepository, provide_user_repository
+from users.scheme import UserReadSchema, UserCreateSchema, UserUpdateSchema
 
 
 class UserController(Controller):
+    path = "users"
     dependencies = {"users_repo": Provide(provide_user_repository)}
 
     @get("/")
@@ -17,7 +17,7 @@ class UserController(Controller):
         type_adapter = TypeAdapter(list[UserReadSchema])
         return type_adapter.validate_python(result)
 
-    @get("/{user_id:str}")
+    @get("/{user_id:uuid}")
     async def get(self, user_id: UUID) -> UserReadSchema:
         return UserReadSchema(id=uuid4(), email="user1@mail.ru", username="user1")
 
@@ -25,10 +25,10 @@ class UserController(Controller):
     async def create(self, data: UserCreateSchema) -> UserReadSchema:
         return UserReadSchema(id=uuid4(), email="user1@mail.ru", username="user1")
 
-    @post("/{user_id:str}")
+    @post("/{user_id:uuid}")
     async def update(self, user_id: UUID, data: UserUpdateSchema) -> UserReadSchema:
         return UserReadSchema(id=uuid4(), email="user1@mail.ru", username="user1")
 
-    @delete("/{user_id:str}")
+    @delete("/{user_id:uuid}")
     async def delete(self, user_id: UUID) -> None:
         pass

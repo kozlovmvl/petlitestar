@@ -9,26 +9,26 @@ services:
       - 5432
     volumes:
       - petlitestar-db-data:/var/lib/postgresql/data/
-  nginx:
-    build: .\nginx
-    ports:
-      - 88:88
-    volumes:
-      - petlitestar-static:/var/www/static
-      - petlitestar-media:/var/www/media
-  app:
-    build: .
-    depends_on:
-      - db
-    env_file:
-      - .env
-    expose:
-      - 8000
-    command: poetry run gunicorn src.app:app --bind 0.0.0.0:8000 -w 4 -k uvicorn.workers.UvicornWorker --error-logfile=src/logs/gunicorn.log
-    volumes:
-      - ./src/logs:/var/www/src/logs
-      - petlitestar-static:/var/www/static
-      - petlitestar-media:/var/www/media
+  # nginx:
+  #   build: .\nginx
+  #   ports:
+  #     - 88:88
+  #   volumes:
+  #     - petlitestar-static:/var/www/static
+  #     - petlitestar-media:/var/www/media
+  # app:
+  #   build: .
+  #   depends_on:
+  #     - db
+  #   env_file:
+  #     - .env
+  #   expose:
+  #     - 8000
+  #   command: poetry run gunicorn src.app:app --bind 0.0.0.0:8000 -w 4 -k uvicorn.workers.UvicornWorker --error-logfile=src/logs/gunicorn.log
+  #   volumes:
+  #     - ./src/logs:/var/www/src/logs
+  #     - petlitestar-static:/var/www/static
+  #     - petlitestar-media:/var/www/media
 volumes:
   petlitestar-static:
   petlitestar-media:
