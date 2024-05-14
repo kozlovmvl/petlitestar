@@ -8,7 +8,7 @@ class UserReadSchema(BaseModel):
     id: UUID
     email: str
     username: str
-    addresses: list["AddressSchema"]
+    addresses: list["AddressReadSchema"]
 
     model_config = {
         "from_attributes": True,
@@ -18,17 +18,22 @@ class UserReadSchema(BaseModel):
 class UserCreateSchema(BaseModel):
     email: str
     username: str
+    addresses: list["AddressCreateSchema"] | None = None
 
 
 class UserUpdateSchema(BaseModel):
     email: str | None = None
     username: str | None = None
+    addresses: list["AddressCreateSchema"] | None = None
 
 
-class AddressSchema(BaseModel):
+class AddressReadSchema(BaseModel):
     city: CityReadSchema
-    id: UUID
 
     model_config = {
         "from_attributes": True,
     }
+
+
+class AddressCreateSchema(BaseModel):
+    city_id: UUID

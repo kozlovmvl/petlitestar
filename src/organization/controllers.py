@@ -2,6 +2,7 @@ from uuid import UUID
 from litestar import Controller, get, post, delete
 from litestar.di import Provide
 from pydantic import TypeAdapter
+from sqlalchemy import asc, select
 
 from organization.models import CityModel, CityRepository, provide_city_repository
 from organization.scheme import CityReadSchema, CityCreateSchema, CityUpdateSchema
@@ -13,7 +14,9 @@ class CityController(Controller):
 
     @get("/")
     async def get_list(self, cities_repo: CityRepository) -> list[CityReadSchema]:
-        result = await cities_repo.list()
+        result = await cities_repo.list(
+            statement=select(CityModel).order_by(asc("name"))
+        )
         type_adapter = TypeAdapter(list[CityReadSchema])
         return type_adapter.validate_python(result)
 
