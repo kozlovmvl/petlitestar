@@ -7,12 +7,13 @@ from litestar import Litestar
 
 from .db import on_startup, sqlalchemy_plugin
 
-from .organization.controllers import CityController
+from .organization.controllers import CityController, CountryController
 from .users.controllers import UserController
 
 app = Litestar(
     route_handlers=[
         CityController,
+        CountryController,
         UserController,
     ],
     on_startup=[on_startup],
