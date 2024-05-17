@@ -16,6 +16,20 @@ advanced-alchemy = "^0.9.3"
 asyncpg = "^0.29.0"
 
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.0"
+ruff = "^0.4.4"
+anyio = "^4.3.0"
+pytest-asyncio = "^0.23.6"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::pytest.PytestConfigWarning",
+]
+pythonpath = "./src"
+asyncio_mode = "auto"
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

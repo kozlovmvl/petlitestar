@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -27,7 +28,9 @@ class CityReadSchema(BaseModel):
 
 class CityCreateSchema(BaseModel):
     name: str
+    country_id: UUID
 
 
 class CityUpdateSchema(BaseModel):
-    name: str
+    name: Optional[str] = None
+    country_id: Optional[UUID] = None

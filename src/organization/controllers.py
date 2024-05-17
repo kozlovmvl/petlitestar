@@ -1,5 +1,5 @@
 from uuid import UUID
-from litestar import Controller, get, post, delete
+from litestar import Controller, get, post, delete, put
 from litestar.di import Provide
 from pydantic import TypeAdapter
 from sqlalchemy import asc, select
@@ -53,7 +53,7 @@ class CountryController(Controller):
         await countries_repo.session.commit()
         return CountryReadSchema.model_validate(obj)
 
-    @post("/{country_id:uuid}")
+    @put("/{country_id:uuid}")
     async def update(
         self,
         country_id: UUID,
@@ -95,7 +95,7 @@ class CityController(Controller):
         await cities_repo.session.commit()
         return CityReadSchema.model_validate(obj)
 
-    @post("/{city_id:uuid}")
+    @put("/{city_id:uuid}")
     async def update(
         self, city_id: UUID, data: CityUpdateSchema, cities_repo: CityRepository
     ) -> CityReadSchema:

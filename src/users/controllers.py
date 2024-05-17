@@ -1,5 +1,5 @@
 from uuid import UUID
-from litestar import Controller, get, post, delete
+from litestar import Controller, get, post, delete, put
 from litestar.di import Provide
 from pydantic import TypeAdapter
 from sqlalchemy import asc, select
@@ -45,7 +45,7 @@ class UserController(Controller):
         obj = await users_repo.get(obj.id)
         return UserReadSchema.model_validate(obj)
 
-    @post("/{user_id:uuid}")
+    @put("/{user_id:uuid}")
     async def update(
         self, user_id: UUID, data: UserUpdateSchema, users_repo: UserRepository
     ) -> UserReadSchema:
