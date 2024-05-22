@@ -1,9 +1,12 @@
 import os
 from collections.abc import AsyncIterator
+import uuid
 from litestar.testing import AsyncTestClient
 from litestar import Litestar
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from auth.models import TokenModel
+from auth.settings import API_KEY_HEADER
 
 from organization.models import (
     CountryModel,
@@ -30,6 +33,12 @@ async def session_factory():
 async def test_client() -> AsyncIterator[AsyncTestClient[Litestar]]:
     async with AsyncTestClient(app) as client:
         yield client
+
+
+@pytest.fixture()
+async def auth_header():
+    encoded_token = TokenModel.encode(TokenModel.create(user_id=uuid.uuid4()))
+    yield {API_KEY_HEADER: encoded_token}
 
 
 @pytest.fixture()

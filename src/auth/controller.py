@@ -1,7 +1,6 @@
-from datetime import datetime
 import uuid
-from jose import jwt
 from litestar import Controller, post, get
+from litestar.status_codes import HTTP_200_OK
 
 from auth.scheme import LoginRequestSchema, LoginResponseSchema
 from auth.models import TokenModel
@@ -10,10 +9,10 @@ from auth.models import TokenModel
 class AuthController(Controller):
     path = "auth"
 
-    @post("/login")
+    @post("/login", status_code=HTTP_200_OK)
     async def login(self, data: LoginRequestSchema) -> LoginResponseSchema:
-        token = TokenModel(date_expires=datetime.now(), user_id=uuid.uuid4())
-        encoded = jwt.encode(token.model_dump(), "secret", algorithm="HS256")
+        token = TokenModel.create(user_id=uuid.uuid4())
+        encoded = TokenModel.encode(token)
         return LoginResponseSchema(token=encoded)
 
     @get("/logout")
