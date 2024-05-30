@@ -10,9 +10,7 @@ class UserReadSchema(BaseModel):
     username: str
     addresses: list["AddressReadSchema"]
 
-    model_config = {
-        "from_attributes": True,
-    }
+    model_config = {"from_attributes": True}
 
 
 class UserCreateSchema(BaseModel):
@@ -27,12 +25,17 @@ class UserUpdateSchema(BaseModel):
     addresses: list["AddressCreateSchema"] | None = None
 
 
+class UserChatSchema(BaseModel):
+    id: UUID
+    username: str
+
+    model_config = {"from_attributes": True}
+
+
 class AddressReadSchema(BaseModel):
     city: CityReadSchema
 
-    model_config = {
-        "from_attributes": True,
-    }
+    model_config = {"from_attributes": True}
 
 
 class AddressCreateSchema(BaseModel):

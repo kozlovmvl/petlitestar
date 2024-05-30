@@ -1,73 +1,115 @@
-from litestar import WebSocket
-from litestar.handlers import WebsocketListener
+from uuid import UUID
+from litestar import Controller, WebSocket, get, post, put, delete, websocket
+from litestar.channels import ChannelsPlugin
 from litestar.di import Provide
 from pydantic import TypeAdapter
 from sqlalchemy import select
 from chats.models import (
+    ChatRepository,
     Command,
     MessageModel,
     MessageRepository,
+    provide_chat_repository,
     provide_message_repository,
 )
 
-from chats.scheme import MessageReadSchema, RequestSchema, ResponseSchema
+from chats.scheme import ChatSchema, MessageReadSchema, MessageWriteSchema, WSDataSchema
 
 
-class ChatController(WebsocketListener):
+class ChatController(Controller):
     path = "chats"
-    dependencies = {"messages_repo": Provide(provide_message_repository)}
+    dependencies = {
+        "chats_repo": Provide(provide_chat_repository),
+    }
 
-    async def on_accept(self, socket: WebSocket, messages_repo: MessageRepository):
+    @get("/")
+    async def get_list(self, chats_repo: ChatRepository) -> list[ChatSchema]:
+        objs = await chats_repo.list()
+        type_adapter = TypeAdapter(list[ChatSchema])
+        return type_adapter.validate_python(objs)
+
+
+class MessageController(Controller):
+    path = "chats/messages"
+    dependencies = {
+        "messages_repo": Provide(provide_message_repository),
+    }
+
+    @get("/")
+    async def get_list(
+        self, messages_repo: MessageRepository
+    ) -> list[MessageReadSchema]:
         objs = await messages_repo.list(
             statement=select(MessageModel).order_by("created_at")
         )
         type_adapter = TypeAdapter(list[MessageReadSchema])
-        await socket.send_json(
-            [obj.model_dump() for obj in type_adapter.validate_python(objs)]
-        )
+        return type_adapter.validate_python(objs)
 
-    async def on_disconnect(self, socket: WebSocket) -> None:
-        print("Connection closed")
-
-    async def on_receive(
-        self, data: str, messages_repo: MessageRepository
-    ) -> ResponseSchema:
-        request = RequestSchema.model_validate_json(data)
-        match request.command:
-            case Command.CREATE:
-                return await self._create_message(request, messages_repo)
-            case Command.UPDATE:
-                return await self._update_message(request, messages_repo)
-            case Command.DELETE:
-                return await self._delete_message(request, messages_repo)
-
-    async def _create_message(
-        self, data: RequestSchema, messages_repo: MessageRepository
-    ) -> ResponseSchema:
+    @post("/")
+    async def create(
+        self,
+        data: MessageWriteSchema,
+        messages_repo: MessageRepository,
+        channels: ChannelsPlugin,
+    ) -> None:
         obj = await messages_repo.add(
-            MessageModel(**data.message.model_dump(exclude_unset=True))
+            MessageModel(**data.model_dump(exclude_unset=True))
         )
         await messages_repo.session.commit()
-        return ResponseSchema(
-            command=Command.CREATE, message=MessageReadSchema.model_validate(obj)
+        obj = await messages_repo.get(obj.id)
+        message = MessageReadSchema.model_validate(obj)
+        await channels.wait_published(
+            WSDataSchema(command=Command.CREATE, message=message).model_dump(),
+            channels=[str(data.chat_id)],
         )
 
-    async def _update_message(
-        self, data: RequestSchema, messages_repo: MessageRepository
-    ) -> ResponseSchema:
-        raw_obj = MessageModel(**data.message.model_dump(exclude_unset=True))
+    @put("/{message_id:uuid}")
+    async def update(
+        self,
+        message_id: UUID,
+        data: MessageWriteSchema,
+        messages_repo: MessageRepository,
+        channels: ChannelsPlugin,
+    ) -> None:
+        raw_obj = MessageModel(**data.model_dump(exclude_unset=True))
+        raw_obj.update({"id": message_id})
         await messages_repo.update(raw_obj)
         await messages_repo.session.commit()
-        obj = await messages_repo.get(data.message.id)
-        return ResponseSchema(
-            command=Command.UPDATE, message=MessageReadSchema.model_validate(obj)
+        obj = await messages_repo.get(message_id)
+        message = MessageReadSchema.model_validate(obj)
+        await channels.wait_published(
+            WSDataSchema(command=Command.UPDATE, message=message).model_dump(),
+            channels=["chats"],
         )
 
-    async def _delete_message(
-        self, data: RequestSchema, messages_repo: MessageRepository
-    ) -> ResponseSchema:
-        await messages_repo.delete(data.message.id)
+    @delete("/{message_id:uuid}")
+    async def delete(
+        self,
+        message_id: UUID,
+        messages_repo: MessageRepository,
+        channels: ChannelsPlugin,
+    ) -> None:
+        await messages_repo.delete(message_id)
         await messages_repo.session.commit()
-        return ResponseSchema(
-            command=Command.DELETE, message=MessageReadSchema(id=data.message.id)
+        await channels.wait_published(
+            WSDataSchema(
+                command=Command.UPDATE, message=MessageReadSchema(id=message_id)
+            ).model_dump(),
+            channels=["chats"],
         )
+
+
+@websocket(
+    "/chats/{chat_id:uuid}",
+    dependencies={"messages_repo": Provide(provide_message_repository)},
+)
+async def chat_handler(
+    chat_id: UUID,
+    messages_repo: MessageRepository,
+    channels: ChannelsPlugin,
+    socket: WebSocket,
+) -> None:
+    await socket.accept()
+    async with channels.start_subscription([str(chat_id)]) as subscriber:
+        async for message in subscriber.iter_events():
+            await socket.send_text(message)

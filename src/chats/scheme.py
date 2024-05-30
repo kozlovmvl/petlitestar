@@ -3,10 +3,20 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from chats.models import Command
+from users.scheme import UserChatSchema
+
+
+class ChatSchema(BaseModel):
+    id: UUID
+    name: str
+    users: list["UserChatSchema"]
+
+    model_config = {"from_attributes": True}
 
 
 class MessageWriteSchema(BaseModel):
     id: Optional[UUID] = None
+    chat_id: Optional[UUID] = None
     text: Optional[str] = None
     author_id: Optional[UUID] = None
 
@@ -26,11 +36,6 @@ class AuthorSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class RequestSchema(BaseModel):
-    command: Command
-    message: Optional[MessageWriteSchema] = None
-
-
-class ResponseSchema(BaseModel):
+class WSDataSchema(BaseModel):
     command: Command
     message: Optional[MessageReadSchema] = None
