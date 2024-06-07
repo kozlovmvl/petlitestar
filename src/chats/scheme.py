@@ -9,6 +9,7 @@ from users.scheme import UserChatSchema
 class ChatSchema(BaseModel):
     id: UUID
     name: str
+    count: int
     users: list["UserChatSchema"]
 
     model_config = {"from_attributes": True}

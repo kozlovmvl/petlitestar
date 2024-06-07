@@ -2,9 +2,10 @@ from uuid import UUID
 from litestar import Controller, WebSocket, get, post, put, delete, websocket
 from litestar.channels import ChannelsPlugin
 from litestar.di import Provide
-from pydantic import TypeAdapter
-from sqlalchemy import select
+from litestar.pagination import ClassicPagination
+from sqlalchemy import desc, select, func
 from chats.models import (
+    ChatModel,
     ChatRepository,
     Command,
     MessageModel,
@@ -14,6 +15,7 @@ from chats.models import (
 )
 
 from chats.scheme import ChatSchema, MessageReadSchema, MessageWriteSchema, WSDataSchema
+from chats.paginators import ChatPaginator, MessagePaginator
 
 
 class ChatController(Controller):
@@ -23,10 +25,17 @@ class ChatController(Controller):
     }
 
     @get("/")
-    async def get_list(self, chats_repo: ChatRepository) -> list[ChatSchema]:
-        objs = await chats_repo.list()
-        type_adapter = TypeAdapter(list[ChatSchema])
-        return type_adapter.validate_python(objs)
+    async def get_list(
+        self, page_size: int, current_page: int, chats_repo: ChatRepository
+    ) -> ClassicPagination[ChatSchema]:
+        paginator = ChatPaginator(
+            async_session=chats_repo.session,
+            stmt=select(ChatModel, func.count(MessageModel.id))
+            .join(MessageModel)
+            .group_by(ChatModel.id),
+            count_stmt=select(func.count(ChatModel.id)),
+        )
+        return await paginator(current_page=current_page, page_size=page_size)
 
 
 class MessageController(Controller):
@@ -35,15 +44,24 @@ class MessageController(Controller):
         "messages_repo": Provide(provide_message_repository),
     }
 
-    @get("/")
+    @get("/{chat_id:uuid}")
     async def get_list(
-        self, messages_repo: MessageRepository
-    ) -> list[MessageReadSchema]:
-        objs = await messages_repo.list(
-            statement=select(MessageModel).order_by("created_at")
+        self,
+        chat_id: UUID,
+        current_page: int,
+        page_size: int,
+        messages_repo: MessageRepository,
+    ) -> ClassicPagination[MessageReadSchema]:
+        paginator = MessagePaginator(
+            async_session=messages_repo.session,
+            stmt=select(MessageModel)
+            .where(MessageModel.chat_id == chat_id)
+            .order_by(desc("created_at")),
+            count_stmt=select(func.count(MessageModel.id), MessageModel.chat_id)
+            .where(MessageModel.chat_id == chat_id)
+            .group_by(MessageModel.chat_id),
         )
-        type_adapter = TypeAdapter(list[MessageReadSchema])
-        return type_adapter.validate_python(objs)
+        return await paginator(current_page=current_page, page_size=page_size)
 
     @post("/")
     async def create(
