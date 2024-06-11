@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from auth.models import TokenModel
 from auth.settings import API_KEY_HEADER
+from chats.models import ChatModel, ChatRepository, MessageModel, MessageRepository
 
 from organization.models import (
     CountryModel,
@@ -14,6 +15,7 @@ from organization.models import (
     CountryRepository,
     CityRepository,
 )
+from users.models import AddressModel, UserRepository, UserModel
 
 from app import app
 
@@ -54,6 +56,24 @@ async def city_repository(session_factory) -> AsyncIterator[CityRepository]:
 
 
 @pytest.fixture()
+async def user_repository(session_factory) -> AsyncIterator[UserRepository]:
+    async with session_factory() as db_session:
+        yield UserRepository(session=db_session)
+
+
+@pytest.fixture()
+async def chat_repository(session_factory) -> AsyncIterator[ChatRepository]:
+    async with session_factory() as db_session:
+        yield ChatRepository(session=db_session)
+
+
+@pytest.fixture()
+async def message_repository(session_factory) -> AsyncIterator[MessageRepository]:
+    async with session_factory() as db_session:
+        yield MessageRepository(session=db_session)
+
+
+@pytest.fixture()
 async def country(country_repository) -> CountryModel:
     obj = await country_repository.add(CountryModel(name="Country"))
     await country_repository.session.commit()
@@ -64,4 +84,33 @@ async def country(country_repository) -> CountryModel:
 async def city(city_repository, country) -> CityModel:
     obj = await city_repository.add(CityModel(name="City", country_id=country.id))
     await city_repository.session.commit()
+    return obj
+
+
+@pytest.fixture()
+async def user(user_repository, city) -> UserModel:
+    obj = await user_repository.add(
+        UserModel(
+            username="user",
+            email="user@test.test",
+            addresses=[AddressModel(city_id=city.id)],
+        )
+    )
+    await user_repository.session.commit()
+    return obj
+
+
+@pytest.fixture()
+async def chat(chat_repository) -> ChatModel:
+    obj = await chat_repository.add(ChatModel(name="chat"))
+    await chat_repository.session.commit()
+    return obj
+
+
+@pytest.fixture()
+async def message(message_repository, chat, user) -> MessageModel:
+    obj = await message_repository.add(
+        MessageModel(chat_id=chat.id, author_id=user.id, text="text")
+    )
+    await message_repository.session.commit()
     return obj

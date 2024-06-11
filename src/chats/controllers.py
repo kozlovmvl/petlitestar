@@ -89,9 +89,9 @@ class MessageController(Controller):
         messages_repo: MessageRepository,
         channels: ChannelsPlugin,
     ) -> None:
-        raw_obj = MessageModel(**data.model_dump(exclude_unset=True))
+        raw_obj = data.model_dump(exclude_unset=True)
         raw_obj.update({"id": message_id})
-        await messages_repo.update(raw_obj)
+        await messages_repo.update(MessageModel(**raw_obj))
         await messages_repo.session.commit()
         obj = await messages_repo.get(message_id)
         message = MessageReadSchema.model_validate(obj)

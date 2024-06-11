@@ -7,7 +7,7 @@ from litestar import Litestar
 from litestar.channels import ChannelsPlugin
 from litestar.channels.backends.memory import MemoryChannelsBackend
 
-from db import on_startup, sqlalchemy_plugin
+from db import on_startup, sqlalchemy_plugin, on_shutdown
 
 from auth.controller import AuthController
 from chats.controllers import ChatController, MessageController, chat_handler
@@ -25,7 +25,7 @@ app = Litestar(
         UserController,
     ],
     on_startup=[on_startup],
-    # on_shutdown=[on_shutdown],
+    on_shutdown=[on_shutdown],
     plugins=[
         sqlalchemy_plugin,
         ChannelsPlugin(

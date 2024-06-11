@@ -5,7 +5,9 @@ from organization.models import CountryModel, CityModel
 
 
 async def test_get_list_counties(test_client: AsyncTestClient[Litestar], auth_header):
-    response = await test_client.get("/countries", headers=auth_header)
+    response = await test_client.get(
+        "/countries", headers=auth_header, params={"page_size": 10, "current_page": 0}
+    )
     assert response.status_code == 200
 
 
@@ -42,7 +44,9 @@ async def test_delete_country(
 
 
 async def test_get_list_cities(test_client: AsyncTestClient[Litestar], auth_header):
-    response = await test_client.get("/cities", headers=auth_header)
+    response = await test_client.get(
+        "/cities", headers=auth_header, params={"page_size": 10, "current_page": 0}
+    )
     assert response.status_code == 200
 
 

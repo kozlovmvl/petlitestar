@@ -1,8 +1,8 @@
 from uuid import UUID
 from litestar import Controller, get, post, delete, put
 from litestar.di import Provide
-from pydantic import TypeAdapter
-from sqlalchemy import asc, select
+from litestar.pagination import ClassicPagination
+from sqlalchemy import asc, func, select
 
 from organization.models import (
     CityModel,
@@ -20,6 +20,7 @@ from organization.scheme import (
     CountryReadSchema,
     CountryUpdateSchema,
 )
+from organization.paginators import CountryPaginator, CityPaginator
 
 
 class CountryController(Controller):
@@ -28,13 +29,14 @@ class CountryController(Controller):
 
     @get("/")
     async def get_list(
-        self, countries_repo: CountryRepository
-    ) -> list[CountryReadSchema]:
-        objs = await countries_repo.list(
-            statement=select(CountryModel).order_by(asc("name"))
+        self, page_size: int, current_page: int, countries_repo: CountryRepository
+    ) -> ClassicPagination[CountryReadSchema]:
+        paginator = CountryPaginator(
+            async_session=countries_repo.session,
+            stmt=select(CountryModel).order_by(asc("name")),
+            count_stmt=select(func.count(CountryModel.id)),
         )
-        type_adapter = TypeAdapter(list[CountryReadSchema])
-        return type_adapter.validate_python(objs)
+        return await paginator(page_size=page_size, current_page=current_page)
 
     @get("/{country_id:uuid}")
     async def get(
@@ -77,10 +79,15 @@ class CityController(Controller):
     dependencies = {"cities_repo": Provide(provide_city_repository)}
 
     @get("/")
-    async def get_list(self, cities_repo: CityRepository) -> list[CityReadSchema]:
-        objs = await cities_repo.list(statement=select(CityModel).order_by(asc("name")))
-        type_adapter = TypeAdapter(list[CityReadSchema])
-        return type_adapter.validate_python(objs)
+    async def get_list(
+        self, page_size: int, current_page: int, cities_repo: CityRepository
+    ) -> ClassicPagination[CityReadSchema]:
+        paginator = CityPaginator(
+            async_session=cities_repo.session,
+            stmt=select(CityModel).order_by(asc("name")),
+            count_stmt=select(func.count(CityModel.id)),
+        )
+        return await paginator(page_size=page_size, current_page=current_page)
 
     @get("/{city_id:uuid}")
     async def get(self, city_id: UUID, cities_repo: CityRepository) -> CityReadSchema:

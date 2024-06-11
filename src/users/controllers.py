@@ -1,8 +1,8 @@
 from uuid import UUID
 from litestar import Controller, get, post, delete, put
 from litestar.di import Provide
-from pydantic import TypeAdapter
-from sqlalchemy import asc, select
+from litestar.pagination import ClassicPagination
+from sqlalchemy import asc, func, select
 
 from users.models import (
     AddressModel,
@@ -10,6 +10,7 @@ from users.models import (
     UserRepository,
     provide_user_repository,
 )
+from users.paginators import UserPaginator
 from users.scheme import UserReadSchema, UserCreateSchema, UserUpdateSchema
 
 
@@ -18,12 +19,15 @@ class UserController(Controller):
     dependencies = {"users_repo": Provide(provide_user_repository)}
 
     @get("/")
-    async def get_list(self, users_repo: UserRepository) -> list[UserReadSchema]:
-        objs = await users_repo.list(
-            statement=select(UserModel).order_by(asc("username"))
+    async def get_list(
+        self, page_size: int, current_page: int, users_repo: UserRepository
+    ) -> ClassicPagination[UserReadSchema]:
+        paginator = UserPaginator(
+            async_session=users_repo.session,
+            stmt=select(UserModel).order_by(asc("username")),
+            count_stmt=select(func.count(UserModel.id)),
         )
-        type_adapter = TypeAdapter(list[UserReadSchema])
-        return type_adapter.validate_python(objs)
+        return await paginator(page_size=page_size, current_page=current_page)
 
     @get("/{user_id:uuid}")
     async def get(self, user_id: UUID, users_repo: UserRepository) -> UserReadSchema:
